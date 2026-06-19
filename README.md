@@ -1,29 +1,29 @@
 # agent-telemetry
 
-MoonBit 的 Agent / LLM / Tool 场景 OpenTelemetry 插桩库。
+OpenTelemetry instrumentation library for MoonBit Agent / LLM / Tool scenarios.
 
-把原本需要手写的大量 OTel tracer/span/attribute 样板代码，封装成一组面向业务语义的 helper，让 Agent 开发者只关注何时创建 span、需要记录哪些业务数据。
+It wraps the boilerplate OTel tracer / span / attribute code into business-semantic helpers, so agent developers only need to decide when to create spans and what business data to record.
 
-## 设计分层
+## Design Layers
 
-- **薄封装**（`lib.mbt`）：provider 初始化、tracer 缓存、`start_span` / `end_span` 等生命周期 helper。
-- **语义封装**（`genai.mbt` / `tool.mbt` / `agent.mbt`）：按 OpenTelemetry GenAI semantic conventions 设置属性，覆盖 chat / tool execution / agent turn 三类 span。
+- **Thin wrapper** (`lib.mbt`): provider initialization, tracer cache, span lifecycle helpers such as `start_span` / `end_span`.
+- **Semantic wrapper** (`genai.mbt`, `tool.mbt`, `agent.mbt`): sets attributes according to the OpenTelemetry GenAI semantic conventions, covering chat, tool execution, and agent turn spans.
 
-## 快速开始
+## Quick Start
 
 ```bash
 moon add cybershang/agent-telemetry
 ```
 
 ```moonbit
-// 方式 1：从环境变量一键初始化
-// 读取 OTEL_SERVICE_NAME、OTEL_STDOUT、OTEL_EXPORTER_OTLP_ENDPOINT
-// 使用 ProcessUniqueRandom 避免进程重启后 trace/span ID 重复
+// Option 1: one-line initialization from environment variables.
+// Reads OTEL_SERVICE_NAME, OTEL_STDOUT, and OTEL_EXPORTER_OTLP_ENDPOINT.
+// Use ProcessUniqueRandom to avoid duplicate trace/span IDs across restarts.
 let provider = @telemetry.init_from_env(
   id_generator=@telemetry.ProcessUniqueRandom,
 )
 
-// 方式 2：手动指定 exporter
+// Option 2: manually select an exporter.
 let config = @telemetry.TelemetryConfig::new(service_name="my-agent")
 let provider = @telemetry.init_telemetry(
   config,
@@ -31,7 +31,7 @@ let provider = @telemetry.init_telemetry(
   id_generator=@telemetry.ProcessUniqueRandom,
 )
 
-// 创建 GenAI chat span
+// Create a GenAI chat span.
 let tracer = @telemetry.tracer("my-agent/llm")
 let span = @telemetry.start_chat_span(
   tracer,
@@ -39,50 +39,50 @@ let span = @telemetry.start_chat_span(
   model="step-3.7-flash",
   max_tokens=1024,
 )
-// ... 发起请求并拿到 response_json ...
+// ... send the request and obtain response_json ...
 @telemetry.record_chat_response(span, response_json)
 @telemetry.end_span_ok(span)
 ```
 
-## 主要 API
+## Main API
 
-| 场景 | 函数 |
+| Scenario | Functions |
 |---|---|
-| 通用 | `TelemetryConfig::new`、`init_telemetry`、`init_from_env`、`IdGeneratorOption`、`tracer`、`start_span`、`end_span`、`end_span_ok`、`end_span_error` |
-| LLM chat | `start_chat_span`、`record_chat_usage`、`record_chat_response`、`set_chat_http_error` |
-| Tool | `start_tool_span`、`record_tool_result`、`set_tool_error` |
-| Agent turn | `start_agent_turn_span`、`record_turn_metrics`、`set_turn_max_tool_turns_error` |
+| General | `TelemetryConfig::new`, `init_telemetry`, `init_from_env`, `IdGeneratorOption`, `tracer`, `start_span`, `end_span`, `end_span_ok`, `end_span_error` |
+| LLM chat | `start_chat_span`, `record_chat_usage`, `record_chat_response`, `set_chat_http_error` |
+| Tool | `start_tool_span`, `record_tool_result`, `set_tool_error` |
+| Agent turn | `start_agent_turn_span`, `record_turn_metrics`, `set_turn_max_tool_turns_error` |
 
-## 环境变量
+## Environment Variables
 
-`init_from_env` 会读取以下变量：
+`init_from_env` reads the following variables:
 
-| 变量 | 说明 | 默认值 |
+| Variable | Description | Default |
 |---|---|---|
-| `OTEL_SERVICE_NAME` | 服务名 | `agent-telemetry` |
-| `OTEL_STDOUT` | 为 `true` 时使用 stdout exporter | `false` |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP/HTTP 端点 | `http://localhost:4318` |
+| `OTEL_SERVICE_NAME` | Service name | `agent-telemetry` |
+| `OTEL_STDOUT` | Use the stdout exporter when set to `true` | `false` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP/HTTP endpoint | `http://localhost:4318` |
 
-## ID 生成器选项
+## ID Generator Option
 
-`init_telemetry` / `init_from_env` 通过 `id_generator` 参数支持三种方式：
+The `id_generator` parameter of `init_telemetry` / `init_from_env` supports:
 
-| 选项 | 说明 |
+| Option | Description |
 |---|---|
-| `@telemetry.SdkDefault` | 使用 SDK 默认 `RandomIdGenerator` |
-| `@telemetry.ProcessUniqueRandom` | 用当前时间戳 + 进程计数器生成唯一种子，避免进程重启后 trace/span ID 重复 |
-| `@telemetry.Custom(generator)` | 传入自定义 `IdGenerator` |
+| `@telemetry.SdkDefault` | Use the SDK default `RandomIdGenerator` |
+| `@telemetry.ProcessUniqueRandom` | Generate a process-unique seed from the current timestamp and a counter, avoiding duplicate trace/span IDs across restarts |
+| `@telemetry.Custom(generator)` | Provide your own `IdGenerator` |
 
-## 目标后端
+## Target Backend
 
-本库依赖 `opentelemetry/otlp` 的 `async/http`、`async/socket` 接口，这些接口只在 **native** 后端可用，因此 `moon.mod` 声明了 `preferred_target = "native"`。使用本库的项目也请以 `--target native` 运行和测试。
+This library depends on `opentelemetry/otlp`, whose `async/http` and `async/socket` interfaces are **native-only**. Therefore `moon.mod` declares `preferred_target = "native"`. Projects using this library should also run and test with `--target native`.
 
-## 测试
+## Testing
 
 ```bash
 moon test -p cybershang/agent-telemetry --target native
 ```
 
-## 许可证
+## License
 
 Mulan PSL v2
