@@ -1,0 +1,25 @@
+name: Publish to mooncakes.io
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MoonBit
+        uses: cogna-dev/moonbit-actions/setup@v0
+
+      - name: Publish package
+        env:
+          MOONCAKES_TOKEN: ${{ secrets.MOONCAKES_TOKEN }}
+        run: |
+          mkdir -p ~/.moon
+          echo "$MOONCAKES_TOKEN" | base64 -d > ~/.moon/credentials.json
+          yes | moon publish
