@@ -77,6 +77,12 @@ The `id_generator` parameter of `init_telemetry` / `init_from_env` supports:
 
 This library depends on `opentelemetry/otlp`, whose `async/http` and `async/socket` interfaces are **native-only**. Therefore `moon.mod` declares `preferred_target = "native"`. Projects using this library should also run and test with `--target native`.
 
+## Example Project
+
+A complete agent example using this library can be found at:
+
+[github.com/cybershang/moonbit-agent-observability](https://github.com/cybershang/moonbit-agent-observability)
+
 ## Testing
 
 ```bash
