@@ -63,17 +63,20 @@ pub async fn init_telemetry(
 /// - `OTEL_SERVICE_NAME` (overrides `service_name`)
 /// - `OTEL_STDOUT` (`true` selects the stdout exporter)
 /// - `OTEL_EXPORTER_OTLP_ENDPOINT` (when `OTEL_STDOUT` is not `true`)
+///
+/// Resolution order for each variable is:
+/// process environment > `.env` file > default value.
 pub async fn init_from_env(
   service_name? : String = "agent-telemetry",
   id_generator? : IdGeneratorOption = SdkDefault,
 ) -> @sdktrace.SdkTracerProvider {
-  let service_name = @env.get_env_var("OTEL_SERVICE_NAME").unwrap_or(
+  let service_name = env_with_dotenv("OTEL_SERVICE_NAME").unwrap_or(
     service_name,
   )
   let config = TelemetryConfig::new(service_name~)
-  let otel_stdout = @env.get_env_var("OTEL_STDOUT").unwrap_or("").to_lower() ==
+  let otel_stdout = env_with_dotenv("OTEL_STDOUT").unwrap_or("").to_lower() ==
     "true"
-  let otel_endpoint = @env.get_env_var("OTEL_EXPORTER_OTLP_ENDPOINT").unwrap_or(
+  let otel_endpoint = env_with_dotenv("OTEL_EXPORTER_OTLP_ENDPOINT").unwrap_or(
     "http://localhost:4318",
   )
   let exporter_type = if otel_stdout { Stdout } else { Otlp(otel_endpoint) }
@@ -81,6 +84,36 @@ pub async fn init_from_env(
 }
 
 ///| Internal helpers
+
+///|
+/// Read a configuration value from the process environment or `.env` file.
+///
+/// Resolution order: process environment > `.env` file > None.
+async fn env_with_dotenv(key : String) -> String? {
+  match @env.get_env_var(key) {
+    Some(value) => Some(value)
+    None => read_dotenv(key)
+  }
+}
+
+///|
+/// Read a value from the `.env` file in the current working directory.
+async fn read_dotenv(key : String) -> String? {
+  let content = (@fs.read_file(".env").text() : String) catch {
+    _ => return None
+  }
+  for line in content.split("\n") {
+    let trimmed = line.trim(char_set="\r ")
+    if trimmed.is_empty() || trimmed.has_prefix("#") {
+      continue
+    }
+    match trimmed.split_once("=") {
+      Some((k, v)) => if k == key { return Some(v.to_owned()) }
+      None => continue
+    }
+  }
+  None
+}
 
 ///|
 /// Resolve an IdGeneratorOption into a concrete IdGenerator.
@@ -254,14 +287,11 @@ pub fn set_attributes(
 ///|
 /// Build a default resource, ensuring service.name is set.
 fn build_resource(service_name : String) -> @resource.Resource {
-  let base = @resource.Resource::builder().build()
-  match @env.get_env_var("OTEL_SERVICE_NAME") {
-    Some(_) => base
-    None =>
-      base.merge(
-        @resource.Resource::new([
-          @common.KeyValue::new("service.name", String(service_name)),
-        ]),
-      )
-  }
+  @resource.Resource::builder()
+  .build()
+  .merge(
+    @resource.Resource::new([
+      @common.KeyValue::new("service.name", String(service_name)),
+    ]),
+  )
 }
