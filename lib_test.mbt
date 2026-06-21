@@ -47,7 +47,7 @@ async test "end_span preserves existing error status" {
   end_span(span)
   let spans = exporter.finished_spans()
   assert_true(spans[0].status.code == @sdktrace.Error)
-  assert_eq(spans[0].status.description, Some("boom"))
+  assert_true(spans[0].status.description == Some("boom"))
 }
 
 ///|

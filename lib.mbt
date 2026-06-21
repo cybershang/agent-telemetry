@@ -53,7 +53,7 @@ pub async fn init_telemetry(
   exporter_type : ExporterType,
   id_generator? : IdGeneratorOption = SdkDefault,
 ) -> @sdktrace.SdkTracerProvider {
-  do_init_telemetry(config, exporter_type, id_generator=id_generator)
+  do_init_telemetry(config, exporter_type, id_generator~)
 }
 
 ///|
@@ -76,19 +76,17 @@ pub async fn init_from_env(
   let otel_endpoint = @env.get_env_var("OTEL_EXPORTER_OTLP_ENDPOINT").unwrap_or(
     "http://localhost:4318",
   )
-  let exporter_type = if otel_stdout {
-    Stdout
-  } else {
-    Otlp(otel_endpoint)
-  }
-  do_init_telemetry(config, exporter_type, id_generator=id_generator)
+  let exporter_type = if otel_stdout { Stdout } else { Otlp(otel_endpoint) }
+  do_init_telemetry(config, exporter_type, id_generator~)
 }
 
 ///| Internal helpers
 
 ///|
 /// Resolve an IdGeneratorOption into a concrete IdGenerator.
-async fn resolve_id_generator(option : IdGeneratorOption) -> @sdktrace.IdGenerator {
+async fn resolve_id_generator(
+  option : IdGeneratorOption,
+) -> @sdktrace.IdGenerator {
   match option {
     SdkDefault => @sdktrace.RandomIdGenerator::new().into_id_generator()
     ProcessUniqueRandom => make_random_id_generator()
@@ -128,12 +126,17 @@ async fn do_init_telemetry(
 
 ///|
 /// Build a span exporter from the requested exporter type.
-async fn build_exporter(exporter_type : ExporterType) -> @sdktrace.SpanExporter? {
+async fn build_exporter(
+  exporter_type : ExporterType,
+) -> @sdktrace.SpanExporter? {
   match exporter_type {
     Stdout => Some(@print.SpanExporter::new().into_span_exporter())
     Otlp(endpoint) =>
       match
-        @otlp.SpanExporter::builder().with_http().with_endpoint(endpoint).build() {
+        @otlp.SpanExporter::builder()
+        .with_http()
+        .with_endpoint(endpoint)
+        .build() {
         Ok(exporter) => Some(exporter.into_span_exporter())
         Err(err) => {
           let err_text = match err {
