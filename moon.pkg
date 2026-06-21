@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/async",
   "moonbitlang/async/process",
   "moonbitlang/async/stdio",
   "moonbitlang/core/env",
@@ -16,7 +17,3 @@ import {
   "moonbit-community/opentelemetry/sdk/trace" @sdktrace,
   "moonbit-community/opentelemetry/semantics/trace" @semtrace,
 }
-
-import {
-  "moonbitlang/async",
-} for "test"

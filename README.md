@@ -63,6 +63,36 @@ let span = @telemetry.start_chat_span(
 | `OTEL_STDOUT` | Use the stdout exporter when set to `true` | `false` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP/HTTP endpoint | `http://localhost:4318` |
 
+## Flushing and Shutting Down
+
+`SdkTracerProvider::force_flush` and `shutdown` return `OTelSdkResult`. The library intentionally leaves error handling to the application so you can decide whether to log, retry, or abort.
+
+A minimal CLI pattern is to print export failures to stdout:
+
+```moonbit
+fn format_error(err : @error.OTelSdkError) -> String {
+  match err {
+    AlreadyShutdown => "AlreadyShutdown"
+    Timeout(ms) => "Timeout(\{ms}ms)"
+    InvalidArgument(msg) => "InvalidArgument(\{msg})"
+    InternalFailure(msg) => "InternalFailure(\{msg})"
+    ExportFailure(name, msg) => "ExportFailure(\{name}, \{msg})"
+  }
+}
+
+match provider.force_flush() {
+  Ok(_) => ()
+  Err(err) => @stdio.stdout.write("Telemetry flush failed: " + format_error(err) + "\n")
+}
+
+match provider.shutdown() {
+  Ok(_) => ()
+  Err(err) => @stdio.stdout.write("Telemetry shutdown failed: " + format_error(err) + "\n")
+}
+```
+
+Always call `shutdown` before the process exits so pending spans are exported.
+
 ## ID Generator Option
 
 The `id_generator` parameter of `init_telemetry` / `init_from_env` supports:

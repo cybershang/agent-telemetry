@@ -102,7 +102,13 @@ async fn do_init_telemetry(
   id_generator? : IdGeneratorOption = SdkDefault,
 ) -> @sdktrace.SdkTracerProvider {
   let id_generator = resolve_id_generator(id_generator)
-  let exporter = build_exporter(exporter_type)
+  let exporter = match build_exporter(exporter_type) {
+    Some(exporter) => exporter
+    None =>
+      abort(
+        "Telemetry exporter could not be built; check OTEL_EXPORTER_OTLP_ENDPOINT and OTEL_STDOUT.",
+      )
+  }
   let resource = build_resource(config.service_name)
   let batch_config = @sdktrace.BatchConfig::new(
     max_queue_size=64,
@@ -110,19 +116,31 @@ async fn do_init_telemetry(
     scheduled_delay_millis=1000,
     export_timeout_millis=5000,
   )
-  let builder = @sdk.tracer_provider_builder()
+  let provider = @sdk.tracer_provider_builder()
     .with_resource(resource)
     .with_id_generator(id_generator)
-  let provider = match exporter {
-    Some(exporter) =>
-      builder.with_batch_exporter(exporter, config=batch_config).build()
-    None => builder.build()
-  }
+    .with_batch_exporter(exporter, config=batch_config)
+    .build()
   @sdk.set_tracer_provider(provider)
   provider
 }
 
 ///| Internal helpers
+
+///|
+/// Append the OTLP/HTTP traces signal path if the endpoint is a base URL.
+///
+/// The `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable is defined as a
+/// base URL; the SDK expects the signal path (`/v1/traces`) to be added.
+/// If the endpoint already ends with `/v1/traces`, it is returned unchanged.
+fn normalize_trace_endpoint(endpoint : String) -> String {
+  let trimmed = endpoint.trim_end(chars="/").to_owned()
+  if trimmed.has_suffix("/v1/traces") {
+    trimmed
+  } else {
+    trimmed + "/v1/traces"
+  }
+}
 
 ///|
 /// Build a span exporter from the requested exporter type.
@@ -135,7 +153,7 @@ async fn build_exporter(
       match
         @otlp.SpanExporter::builder()
         .with_http()
-        .with_endpoint(endpoint)
+        .with_endpoint(normalize_trace_endpoint(endpoint))
         .build() {
         Ok(exporter) => Some(exporter.into_span_exporter())
         Err(err) => {
