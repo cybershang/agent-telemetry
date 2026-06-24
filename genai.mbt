@@ -12,12 +12,15 @@
 /// - `gen_ai.request.model`
 /// - `gen_ai.request.max_tokens`
 /// - `gen_ai.input.messages` when `input_messages` is provided
+/// - `server.address` and `server.port` when provided
 pub fn start_chat_span(
   tracer : @trace.Tracer,
   provider_name : String,
   model : String,
   max_tokens : Int,
   input_messages? : Json? = None,
+  server_address? : String? = None,
+  server_port? : Int? = None,
   parent_context? : @context.Context = @context.Context::empty(),
 ) -> @trace.Span {
   let attributes = [
@@ -29,6 +32,18 @@ pub fn start_chat_span(
       Int64(max_tokens.to_int64()),
     ),
   ]
+  match server_address {
+    Some(address) =>
+      attributes.push(@otel.KeyValue::new("server.address", String(address)))
+    None => ()
+  }
+  match server_port {
+    Some(port) =>
+      attributes.push(
+        @otel.KeyValue::new("server.port", Int64(port.to_int64())),
+      )
+    None => ()
+  }
   let span = start_span(
     tracer,
     "gen_ai.chat",
@@ -116,11 +131,16 @@ pub fn record_chat_response(
 
 ///|
 /// Mark a chat span as failed due to an HTTP error.
+///
+/// Sets `error.type` to the status code string, records the span status as error,
+/// and emits an `llm.http_error` event.
 pub fn set_chat_http_error(
   span : @trace.Span,
   status_code : Int,
   message? : String,
 ) -> Unit {
+  let error_type = status_code.to_string()
+  span.set_attribute(@otel.KeyValue::new("error.type", String(error_type)))
   span.set_status(
     @trace.Status::error(
       description=Some(message.unwrap_or("HTTP \{status_code}")),

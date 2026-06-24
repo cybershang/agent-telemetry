@@ -67,3 +67,38 @@ test "tracer returns same tracer for same scope" {
   ignore(t1)
   ignore(t2)
 }
+
+///|
+async test "set_*_attribute helpers write typed span attributes" {
+  let (tracer, exporter) = make_test_tracer()
+  let span = start_span(tracer, "custom.attrs")
+  set_string_attribute(span, "app.user.id", "user-42")
+  set_int_attribute(span, "app.retry.count", 3L)
+  set_double_attribute(span, "app.score", 0.95)
+  set_bool_attribute(span, "app.cached", true)
+  set_json_attribute(span, "app.metadata", { "source": "api", "depth": 2 })
+  end_span_ok(span)
+  let spans = exporter.finished_spans()
+  assert_eq(spans.length(), 1)
+  let s = spans[0]
+  match find_attr(s, "app.user.id") {
+    Some(String("user-42")) => ()
+    _ => fail("expected string attribute")
+  }
+  match find_attr(s, "app.retry.count") {
+    Some(Int64(3L)) => ()
+    _ => fail("expected int64 attribute")
+  }
+  match find_attr(s, "app.score") {
+    Some(Double(d)) => assert_true(d == 0.95)
+    _ => fail("expected double attribute")
+  }
+  match find_attr(s, "app.cached") {
+    Some(Bool(true)) => ()
+    _ => fail("expected bool attribute")
+  }
+  match find_attr(s, "app.metadata") {
+    Some(String(json)) => assert_true(json.contains("source"))
+    _ => fail("expected json attribute")
+  }
+}

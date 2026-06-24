@@ -10,11 +10,25 @@ import {
   "moonbit-community/opentelemetry" @otel,
   "moonbit-community/opentelemetry/interface/common",
   "moonbit-community/opentelemetry/interface/context",
+  "moonbit-community/opentelemetry/interface/logs",
+  "moonbit-community/opentelemetry/interface/metrics",
   "moonbit-community/opentelemetry/interface/trace",
   "moonbit-community/opentelemetry/otlp",
   "moonbit-community/opentelemetry/print",
   "moonbit-community/opentelemetry/sdk",
+  "moonbit-community/opentelemetry/sdk/error",
+  "moonbit-community/opentelemetry/sdk/logs" @sdklogs,
+  "moonbit-community/opentelemetry/sdk/metrics" @sdkmetrics,
   "moonbit-community/opentelemetry/sdk/resource",
   "moonbit-community/opentelemetry/sdk/trace" @sdktrace,
   "moonbit-community/opentelemetry/semantics/trace" @semtrace,
 }
+
+import {
+  "moonbitlang/async",
+  "moonbitlang/core/json",
+} for "test"
+
+import {
+  "moonbitlang/async",
+} for "wbtest"

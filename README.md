@@ -19,39 +19,71 @@ moon add cybershang/agent-telemetry
 // Option 1: one-line initialization from environment variables.
 // Reads OTEL_SERVICE_NAME, OTEL_STDOUT, and OTEL_EXPORTER_OTLP_ENDPOINT.
 // Use ProcessUniqueRandom to avoid duplicate trace/span IDs across restarts.
-let provider = @telemetry.init_from_env(
+let providers = @telemetry.init_from_env(
   id_generator=@telemetry.ProcessUniqueRandom,
 )
 
 // Option 2: manually select an exporter.
 let config = @telemetry.TelemetryConfig::new(service_name="my-agent")
-let provider = @telemetry.init_telemetry(
+let providers = @telemetry.init_telemetry(
   config,
   @telemetry.Otlp("http://localhost:4318"),
   id_generator=@telemetry.ProcessUniqueRandom,
 )
 
-// Create a GenAI chat span.
-let tracer = @telemetry.tracer("my-agent/llm")
-let span = @telemetry.start_chat_span(
-  tracer,
-  provider_name="stepfun",
-  model="step-3.7-flash",
-  max_tokens=1024,
-)
-// ... send the request and obtain response_json ...
-@telemetry.record_chat_response(span, response_json)
-@telemetry.end_span_ok(span)
+// Metrics and logs need background tasks.
+@async.with_task_group((group) => {
+  providers.spawn_background_tasks(group)
+
+  // Create a GenAI chat span.
+  let tracer = @telemetry.tracer("my-agent/llm")
+  let meter = @telemetry.meter("my-agent/llm")
+  let span = @telemetry.start_chat_span(
+    tracer,
+    provider_name="stepfun",
+    model="step-3.7-flash",
+    max_tokens=1024,
+  )
+  // ... send the request and obtain response_json ...
+  @telemetry.record_llm_call(meter, "stepfun", "step-3.7-flash", success=true)
+  @telemetry.record_chat_response(span, response_json)
+  @telemetry.end_span_ok(span)
+
+  providers.force_flush()
+  providers.shutdown()
+})
 ```
 
 ## Main API
 
 | Scenario | Functions |
 |---|---|
-| General | `TelemetryConfig::new`, `init_telemetry`, `init_from_env`, `IdGeneratorOption`, `tracer`, `start_span`, `end_span`, `end_span_ok`, `end_span_error` |
+| General | `TelemetryConfig::new`, `init_telemetry`, `init_from_env`, `TelemetryProviders`, `IdGeneratorOption`, `tracer`, `meter`, `logger`, `conversation_logger`, `start_span`, `end_span`, `end_span_ok`, `end_span_error`, `set_attributes`, `set_string_attribute`, `set_int_attribute`, `set_double_attribute`, `set_bool_attribute`, `set_json_attribute` |
 | LLM chat | `start_chat_span`, `record_chat_usage`, `record_chat_response`, `set_chat_http_error` |
 | Tool | `start_tool_span`, `record_tool_result`, `set_tool_error` |
 | Agent turn | `start_agent_turn_span`, `record_turn_metrics`, `set_turn_max_tool_turns_error` |
+| Metrics | `record_llm_call`, `record_llm_latency`, `record_tool_call`, `record_turn_count` |
+| Logs | `emit_log`, `log_info`, `log_warn`, `log_error`, `log_conversation_message` |
+
+## Custom Span Attributes
+
+The library already sets the standard GenAI semantic attributes for chat/tool/agent spans. When you need to record your own domain-specific metadata, use the typed attribute helpers:
+
+```moonbit
+let span = @telemetry.start_span(tracer, "my.step")
+@telemetry.set_string_attribute(span, "app.user.id", "user-42")
+@telemetry.set_int_attribute(span, "app.retry.count", 3L)
+@telemetry.set_double_attribute(span, "app.score", 0.95)
+@telemetry.set_bool_attribute(span, "app.cached", true)
+@telemetry.set_json_attribute(span, "app.metadata", { "source": "api", "depth": 2 })
+@telemetry.end_span_ok(span)
+```
+
+`set_json_attribute` serializes the `Json` value to a string, which is useful for structured metadata that does not fit the scalar attribute types. For arbitrary attribute lists you can still use `set_attributes(span, attrs)` with `@otel.KeyValue` values.
+
+## Instrumentation Guide
+
+See [docs/instrumentation.md](docs/instrumentation.md) for a step-by-step guide that shows how to instrument LLM chat requests, tool executions, and agent turns using the `agent-observability` sample application as a reference.
 
 ## Environment Variables
 
@@ -62,36 +94,40 @@ let span = @telemetry.start_chat_span(
 | `OTEL_SERVICE_NAME` | Service name | `agent-telemetry` |
 | `OTEL_STDOUT` | Use the stdout exporter when set to `true` | `false` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP/HTTP endpoint | `http://localhost:4318` |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Global OTLP headers, comma-separated `key=value` pairs | *(empty)* |
+| `OTEL_EXPORTER_OTLP_TRACES_HEADERS` | Trace-specific OTLP headers | *(empty, falls back to global)* |
+| `OTEL_EXPORTER_OTLP_METRICS_HEADERS` | Metric-specific OTLP headers | *(empty, falls back to global)* |
+| `OTEL_EXPORTER_OTLP_LOGS_HEADERS` | Log-specific OTLP headers | *(empty, falls back to global)* |
+| `GREPTIME_TRACE_PIPELINE` | GreptimeDB trace pipeline name | `greptime_trace_v1` |
+| `GREPTIME_LOG_TABLE` | Target table for conversation logs | `genai_conversations` |
+
+Signal-specific header variables take precedence over `OTEL_EXPORTER_OTLP_HEADERS`. This is useful for backends that require authentication tokens or custom routing headers.
+
+For example:
+
+```bash
+OTEL_EXPORTER_OTLP_LOGS_HEADERS="Authorization=Bearer my-token, X-Scope-OrgID=tenant-1"
+```
+
+## Log Routing
+
+The library maintains two separate loggers:
+
+- **Default logger** (`logger` / `log_info` / `log_warn` / `log_error`) writes to the standard OTLP logs table (`opentelemetry_logs` by default).
+- **Conversation logger** (`conversation_logger` / `log_conversation_message`) writes to the table configured by `GREPTIME_LOG_TABLE` (default `genai_conversations`).
+
+When exporting to GreptimeDB, this lets you keep general application logs and LLM conversation logs in separate tables.
 
 ## Flushing and Shutting Down
 
-`SdkTracerProvider::force_flush` and `shutdown` return `OTelSdkResult`. The library intentionally leaves error handling to the application so you can decide whether to log, retry, or abort.
-
-A minimal CLI pattern is to print export failures to stdout:
+`TelemetryProviders` exposes `force_flush()` and `shutdown()` methods that flush/shutdown all three providers (traces, metrics, logs) and print any errors to stdout.
 
 ```moonbit
-fn format_error(err : @error.OTelSdkError) -> String {
-  match err {
-    AlreadyShutdown => "AlreadyShutdown"
-    Timeout(ms) => "Timeout(\{ms}ms)"
-    InvalidArgument(msg) => "InvalidArgument(\{msg})"
-    InternalFailure(msg) => "InternalFailure(\{msg})"
-    ExportFailure(name, msg) => "ExportFailure(\{name}, \{msg})"
-  }
-}
-
-match provider.force_flush() {
-  Ok(_) => ()
-  Err(err) => @stdio.stdout.write("Telemetry flush failed: " + format_error(err) + "\n")
-}
-
-match provider.shutdown() {
-  Ok(_) => ()
-  Err(err) => @stdio.stdout.write("Telemetry shutdown failed: " + format_error(err) + "\n")
-}
+providers.force_flush()
+providers.shutdown()
 ```
 
-Always call `shutdown` before the process exits so pending spans are exported.
+Always call `shutdown` before the process exits so pending telemetry is exported.
 
 ## ID Generator Option
 

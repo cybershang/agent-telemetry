@@ -4,33 +4,71 @@ package "cybershang/agent-telemetry"
 import {
   "moonbit-community/opentelemetry/interface/common",
   "moonbit-community/opentelemetry/interface/context",
+  "moonbit-community/opentelemetry/sdk/resource",
+  "moonbitlang/async",
   "moonbitlang/core/debug",
 }
 
 // Values
+pub fn conversation_logger(String) -> @moonbit-community/opentelemetry/interface/logs.Logger
+
+pub async fn emit_log(String, @moonbit-community/opentelemetry/interface/logs.Severity, String, attributes? : Array[@common.KeyValue], trace_context? : @common.SpanContext?) -> Unit
+
 pub async fn end_span(@moonbit-community/opentelemetry/interface/trace.Span, status? : @moonbit-community/opentelemetry/interface/trace.Status) -> Unit
 
 pub async fn end_span_error(@moonbit-community/opentelemetry/interface/trace.Span, description~ : String) -> Unit
 
 pub async fn end_span_ok(@moonbit-community/opentelemetry/interface/trace.Span) -> Unit
 
-pub async fn init_from_env(service_name? : String, id_generator? : IdGeneratorOption) -> @moonbit-community/opentelemetry/sdk/trace.SdkTracerProvider
+pub async fn init_from_env(service_name? : String, id_generator? : IdGeneratorOption) -> TelemetryProviders
 
-pub async fn init_telemetry(TelemetryConfig, ExporterType, id_generator? : IdGeneratorOption) -> @moonbit-community/opentelemetry/sdk/trace.SdkTracerProvider
+pub async fn init_telemetry(TelemetryConfig, ExporterType, id_generator? : IdGeneratorOption) -> TelemetryProviders
+
+pub async fn log_conversation_message(String, String, String, index? : Int, trace_context? : @common.SpanContext?) -> Unit
+
+pub async fn log_error(String, String, attributes? : Array[@common.KeyValue], trace_context? : @common.SpanContext?) -> Unit
+
+pub async fn log_info(String, String, attributes? : Array[@common.KeyValue], trace_context? : @common.SpanContext?) -> Unit
+
+pub async fn log_warn(String, String, attributes? : Array[@common.KeyValue], trace_context? : @common.SpanContext?) -> Unit
+
+pub fn logger(String) -> @moonbit-community/opentelemetry/interface/logs.Logger
 
 pub async fn make_random_id_generator() -> @moonbit-community/opentelemetry/sdk/trace.IdGenerator
+
+pub fn meter(String) -> @moonbit-community/opentelemetry/interface/metrics.Meter
+
+pub async fn now_seconds() -> Double
 
 pub fn record_chat_response(@moonbit-community/opentelemetry/interface/trace.Span, Json, output_messages? : Json?) -> Unit
 
 pub fn record_chat_usage(@moonbit-community/opentelemetry/interface/trace.Span, Json) -> Unit
 
+pub fn record_llm_latency(@moonbit-community/opentelemetry/interface/metrics.Meter, String, String, seconds~ : Double) -> Unit
+
+pub fn record_llm_token_usage(@moonbit-community/opentelemetry/interface/metrics.Meter, String, String, String, Int64) -> Unit
+
+pub fn record_tool_call(@moonbit-community/opentelemetry/interface/metrics.Meter, String, success~ : Bool) -> Unit
+
 pub fn record_tool_result(@moonbit-community/opentelemetry/interface/trace.Span, String) -> Unit
+
+pub fn record_turn_count(@moonbit-community/opentelemetry/interface/metrics.Meter, max_tool_turns_reached~ : Bool) -> Unit
 
 pub fn record_turn_metrics(@moonbit-community/opentelemetry/interface/trace.Span, Int, Int, String) -> Unit
 
 pub fn set_attributes(@moonbit-community/opentelemetry/interface/trace.Span, Array[@common.KeyValue]) -> Unit
 
+pub fn set_bool_attribute(@moonbit-community/opentelemetry/interface/trace.Span, String, Bool) -> Unit
+
 pub fn set_chat_http_error(@moonbit-community/opentelemetry/interface/trace.Span, Int, message? : String) -> Unit
+
+pub fn set_double_attribute(@moonbit-community/opentelemetry/interface/trace.Span, String, Double) -> Unit
+
+pub fn set_int_attribute(@moonbit-community/opentelemetry/interface/trace.Span, String, Int64) -> Unit
+
+pub fn set_json_attribute(@moonbit-community/opentelemetry/interface/trace.Span, String, Json) -> Unit
+
+pub fn set_string_attribute(@moonbit-community/opentelemetry/interface/trace.Span, String, String) -> Unit
 
 pub fn set_tool_error(@moonbit-community/opentelemetry/interface/trace.Span, String) -> Unit
 
@@ -38,7 +76,7 @@ pub fn set_turn_max_tool_turns_error(@moonbit-community/opentelemetry/interface/
 
 pub fn start_agent_turn_span(@moonbit-community/opentelemetry/interface/trace.Tracer, String, Int) -> @moonbit-community/opentelemetry/interface/trace.Span
 
-pub fn start_chat_span(@moonbit-community/opentelemetry/interface/trace.Tracer, String, String, Int, input_messages? : Json?, parent_context? : @context.Context) -> @moonbit-community/opentelemetry/interface/trace.Span
+pub fn start_chat_span(@moonbit-community/opentelemetry/interface/trace.Tracer, String, String, Int, input_messages? : Json?, server_address? : String?, server_port? : Int?, parent_context? : @context.Context) -> @moonbit-community/opentelemetry/interface/trace.Span
 
 pub fn start_span(@moonbit-community/opentelemetry/interface/trace.Tracer, String, kind? : @moonbit-community/opentelemetry/interface/trace.SpanKind, attributes? : Array[@common.KeyValue], parent_context? : @context.Context) -> @moonbit-community/opentelemetry/interface/trace.Span
 
@@ -66,6 +104,17 @@ pub struct TelemetryConfig {
   service_name : String
 } derive(@debug.Debug)
 pub fn TelemetryConfig::new(service_name? : String) -> Self
+
+pub struct TelemetryProviders {
+  tracer_provider : @moonbit-community/opentelemetry/sdk/trace.SdkTracerProvider
+  meter_provider : @moonbit-community/opentelemetry/sdk/metrics.SdkMeterProvider
+  logger_provider : @moonbit-community/opentelemetry/sdk/logs.SdkLoggerProvider
+  conversation_logger_provider : @moonbit-community/opentelemetry/sdk/logs.SdkLoggerProvider
+  resource : @resource.Resource
+}
+pub async fn TelemetryProviders::force_flush(Self) -> Unit
+pub async fn TelemetryProviders::shutdown(Self) -> Unit
+pub fn TelemetryProviders::spawn_background_tasks(Self, @async.TaskGroup[Unit], allow_failure? : Bool) -> Unit
 
 // Type aliases
 

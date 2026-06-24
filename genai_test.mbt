@@ -109,4 +109,8 @@ async test "set_chat_http_error records error event and status" {
   assert_true(spans[0].status.code == @sdktrace.Error)
   assert_eq(spans[0].events.length(), 1)
   assert_eq(spans[0].events[0].name, "llm.http_error")
+  match find_attr(spans[0], "error.type") {
+    Some(String("401")) => ()
+    _ => fail("expected error.type=401")
+  }
 }
