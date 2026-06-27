@@ -68,20 +68,24 @@ pub fn start_chat_span(
 /// Set usage attributes from a GenAI response usage object.
 ///
 /// Sets `gen_ai.usage.input_tokens` and `gen_ai.usage.output_tokens` when present.
-pub fn set_chat_usage(span : @trace.Span, usage_json : Json) -> Unit {
-  if usage_json is { "prompt_tokens": Number(pt, ..), .. } {
+pub fn set_usage(
+  span : @trace.Span,
+  prompt_tokens : Int64,
+  completion_tokens : Int64,
+) -> Unit {
+  if prompt_tokens > 0L {
     span.set_attribute(
       @otel.KeyValue::new(
         @semtrace.GEN_AI_USAGE_INPUT_TOKENS,
-        Int64(pt.to_int64()),
+        Int64(prompt_tokens),
       ),
     )
   }
-  if usage_json is { "completion_tokens": Number(ct, ..), .. } {
+  if completion_tokens > 0L {
     span.set_attribute(
       @otel.KeyValue::new(
         @semtrace.GEN_AI_USAGE_OUTPUT_TOKENS,
-        Int64(ct.to_int64()),
+        Int64(completion_tokens),
       ),
     )
   }
@@ -93,7 +97,7 @@ pub fn set_chat_usage(span : @trace.Span, usage_json : Json) -> Unit {
 /// Extracts `gen_ai.response.id`, `gen_ai.response.model` and
 /// `gen_ai.response.finish_reasons` from `response_json`.
 /// Sets `gen_ai.output.messages` when `output_messages` is provided.
-pub fn set_chat_response(
+pub fn set_response(
   span : @trace.Span,
   response_json : Json,
   output_messages? : Json? = None,

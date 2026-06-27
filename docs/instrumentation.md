@@ -152,8 +152,8 @@ Get a `Meter` for your scope and call the semantic metric functions:
 let meter = @telemetry.meter("my-agent/llm")
 
 @telemetry.record_llm_latency(meter, "stepfun", "step-3.7-flash", seconds=0.85)
-@telemetry.record_llm_token_usage(meter, "stepfun", "step-3.7-flash", "input", 100L)
-@telemetry.record_llm_token_usage(meter, "stepfun", "step-3.7-flash", "output", 25L)
+@telemetry.record_usage(meter, "stepfun", "step-3.7-flash", "input", 100L)
+@telemetry.record_usage(meter, "stepfun", "step-3.7-flash", "output", 25L)
 ```
 
 The following metrics are emitted:

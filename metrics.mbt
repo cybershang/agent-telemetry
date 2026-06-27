@@ -62,7 +62,7 @@ pub fn record_llm_latency(
 
 ///|
 /// Record token usage for one GenAI chat operation.
-pub fn record_llm_token_usage(
+pub fn record_usage(
   meter : @metrics.Meter,
   provider_name : String,
   model : String,

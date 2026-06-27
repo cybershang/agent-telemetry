@@ -45,7 +45,7 @@ let providers = @telemetry.init_telemetry(
     max_tokens=1024,
   )
   // ... send the request and obtain response_json ...
-  @telemetry.set_chat_response(span, response_json)
+  @telemetry.set_response(span, response_json)
   @telemetry.end_span(span)
 
   providers.force_flush()
@@ -58,10 +58,10 @@ let providers = @telemetry.init_telemetry(
 | Scenario | Functions |
 |---|---|
 | General | `TelemetryConfig::new`, `init_telemetry`, `init_from_env`, `TelemetryProviders`, `IdGeneratorOption`, `tracer`, `meter`, `logger`, `conversation_logger`, `start_span`, `end_span`, `set_attributes`, `set_string`, `set_int`, `set_double`, `set_bool`, `set_json` |
-| LLM chat | `start_chat_span`, `set_chat_usage`, `set_chat_response`, `set_http_error` |
+| LLM chat | `start_chat_span`, `set_usage`, `set_response`, `set_http_error` |
 | Tool | `start_tool_span`, `set_tool_result`, `set_tool_error` |
 | Agent turn | `start_agent_turn_span`, `set_turn`, `set_turn_exhausted` |
-| Metrics | `record_llm_latency`, `record_llm_token_usage`, `record_tool_call`, `record_turn` |
+| Metrics | `record_llm_latency`, `record_usage`, `record_tool_call`, `record_turn` |
 | Logs | `emit_log`, `log_info`, `log_warn`, `log_error`, `log_conversation_message` |
 
 ## Custom Span Attributes

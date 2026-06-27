@@ -10,11 +10,11 @@ test "record_llm_latency emits histogram metric" {
 }
 
 ///|
-test "record_llm_token_usage emits histogram metric" {
+test "record_usage emits histogram metric" {
   let _providers = make_test_telemetry()
   let meter = meter("test")
-  record_llm_token_usage(meter, "openai", "gpt-4", "input", 42L)
-  record_llm_token_usage(meter, "openai", "gpt-4", "output", 7L)
+  record_usage(meter, "openai", "gpt-4", "input", 42L)
+  record_usage(meter, "openai", "gpt-4", "output", 7L)
 }
 
 ///|
@@ -22,8 +22,8 @@ test "metric instruments are cached and reused" {
   let _providers = make_test_telemetry()
   let meter = meter("test")
   record_llm_latency(meter, "a", "b", seconds=0.1)
-  record_llm_token_usage(meter, "a", "b", "input", 1L)
-  record_llm_token_usage(meter, "a", "b", "output", 2L)
+  record_usage(meter, "a", "b", "input", 1L)
+  record_usage(meter, "a", "b", "output", 2L)
 }
 
 ///|
@@ -67,8 +67,8 @@ async test "manual reader collects gen_ai token usage metric" {
   })
 
   let meter = meter("token-usage-test")
-  record_llm_token_usage(meter, "openai", "gpt-4", "input", 100L)
-  record_llm_token_usage(meter, "openai", "gpt-4", "output", 25L)
+  record_usage(meter, "openai", "gpt-4", "input", 100L)
+  record_usage(meter, "openai", "gpt-4", "output", 25L)
 
   let metrics = reader.collect()
   inspect(metrics.length(), content="2")
