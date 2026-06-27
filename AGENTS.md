@@ -38,11 +38,11 @@ root:
 |---|---|
 | `moon.mod` | Module metadata: name, version, dependencies, supported targets. |
 | `moon.pkg` | Package imports, aliased with `@process`, `@random`, `@otel`, `@common`, `@context`, `@trace`, `@otlp`, `@print`, `@sdk`, `@resource`, `@sdktrace`, `@semtrace`. `moonbitlang/async` is imported only for tests because the library's production code does not reference it directly. |
-| `lib.mbt` | Core API: `TelemetryConfig`, `ExporterType`, `IdGeneratorOption`, `init_telemetry`, `init_from_env`, `tracer`, `start_span`, `end_span`, `end_span_ok`, `end_span_error`, `set_attributes`. |
+| `lib.mbt` | Core API: `TelemetryConfig`, `ExporterType`, `IdGeneratorOption`, `init_telemetry`, `init_from_env`, `tracer`, `start_span`, `end_span`, `set_attributes`. |
 | `id_generator.mbt` | Process-unique random ID generator workaround for the SDK default fixed seed. |
-| `genai.mbt` | GenAI chat span helpers: `start_chat_span`, `record_chat_usage`, `record_chat_response`, `set_chat_http_error`. |
-| `tool.mbt` | Tool execution span helpers: `start_tool_span`, `record_tool_result`, `set_tool_error`. |
-| `agent.mbt` | Agent turn span helpers: `start_agent_turn_span`, `record_turn_metrics`, `set_turn_max_tool_turns_error`. |
+| `genai.mbt` | GenAI chat span helpers: `start_chat_span`, `set_chat_usage`, `set_chat_response`, `set_http_error`. |
+| `tool.mbt` | Tool execution span helpers: `start_tool_span`, `set_tool_result`, `set_tool_error`. |
+| `agent.mbt` | Agent turn span helpers: `start_agent_turn_span`, `set_turn`, `set_turn_exhausted`. |
 | `lib_test.mbt` | Tests for core span lifecycle and tracer cache. |
 | `genai_test.mbt` | Tests for GenAI chat span attributes and error handling. |
 | `tool_test.mbt` | Tests for tool span attributes and result handling. |

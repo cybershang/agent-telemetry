@@ -45,9 +45,8 @@ let providers = @telemetry.init_telemetry(
     max_tokens=1024,
   )
   // ... send the request and obtain response_json ...
-  @telemetry.record_llm_call(meter, "stepfun", "step-3.7-flash", success=true)
-  @telemetry.record_chat_response(span, response_json)
-  @telemetry.end_span_ok(span)
+  @telemetry.set_chat_response(span, response_json)
+  @telemetry.end_span(span)
 
   providers.force_flush()
   providers.shutdown()
@@ -58,11 +57,11 @@ let providers = @telemetry.init_telemetry(
 
 | Scenario | Functions |
 |---|---|
-| General | `TelemetryConfig::new`, `init_telemetry`, `init_from_env`, `TelemetryProviders`, `IdGeneratorOption`, `tracer`, `meter`, `logger`, `conversation_logger`, `start_span`, `end_span`, `end_span_ok`, `end_span_error`, `set_attributes`, `set_string_attribute`, `set_int_attribute`, `set_double_attribute`, `set_bool_attribute`, `set_json_attribute` |
-| LLM chat | `start_chat_span`, `record_chat_usage`, `record_chat_response`, `set_chat_http_error` |
-| Tool | `start_tool_span`, `record_tool_result`, `set_tool_error` |
-| Agent turn | `start_agent_turn_span`, `record_turn_metrics`, `set_turn_max_tool_turns_error` |
-| Metrics | `record_llm_call`, `record_llm_latency`, `record_tool_call`, `record_turn_count` |
+| General | `TelemetryConfig::new`, `init_telemetry`, `init_from_env`, `TelemetryProviders`, `IdGeneratorOption`, `tracer`, `meter`, `logger`, `conversation_logger`, `start_span`, `end_span`, `set_attributes`, `set_string`, `set_int`, `set_double`, `set_bool`, `set_json` |
+| LLM chat | `start_chat_span`, `set_chat_usage`, `set_chat_response`, `set_http_error` |
+| Tool | `start_tool_span`, `set_tool_result`, `set_tool_error` |
+| Agent turn | `start_agent_turn_span`, `set_turn`, `set_turn_exhausted` |
+| Metrics | `record_llm_latency`, `record_llm_token_usage`, `record_tool_call`, `record_turn` |
 | Logs | `emit_log`, `log_info`, `log_warn`, `log_error`, `log_conversation_message` |
 
 ## Custom Span Attributes
@@ -71,12 +70,12 @@ The library already sets the standard GenAI semantic attributes for chat/tool/ag
 
 ```moonbit
 let span = @telemetry.start_span(tracer, "my.step")
-@telemetry.set_string_attribute(span, "app.user.id", "user-42")
-@telemetry.set_int_attribute(span, "app.retry.count", 3L)
-@telemetry.set_double_attribute(span, "app.score", 0.95)
-@telemetry.set_bool_attribute(span, "app.cached", true)
-@telemetry.set_json_attribute(span, "app.metadata", { "source": "api", "depth": 2 })
-@telemetry.end_span_ok(span)
+@telemetry.set_string(span, "app.user.id", "user-42")
+@telemetry.set_int(span, "app.retry.count", 3L)
+@telemetry.set_double(span, "app.score", 0.95)
+@telemetry.set_bool(span, "app.cached", true)
+@telemetry.set_json(span, "app.metadata", { "source": "api", "depth": 2 })
+@telemetry.end_span(span)
 ```
 
 `set_json_attribute` serializes the `Json` value to a string, which is useful for structured metadata that does not fit the scalar attribute types. For arbitrary attribute lists you can still use `set_attributes(span, attrs)` with `@otel.KeyValue` values.

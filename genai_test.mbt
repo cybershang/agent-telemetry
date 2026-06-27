@@ -100,10 +100,10 @@ async test "set_chat_response sets response metadata" {
 }
 
 ///|
-async test "set_chat_http_error records error event and status" {
+async test "set_http_error records error event and status" {
   let (tracer, exporter) = make_test_tracer()
   let span = start_chat_span(tracer, "stepfun", "step-3.7-flash", 1024)
-  set_chat_http_error(span, 401)
+  set_http_error(span, 401)
   end_span(span)
   let spans = exporter.finished_spans()
   assert_true(spans[0].status.code == @sdktrace.Error)

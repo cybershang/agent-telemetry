@@ -134,7 +134,7 @@ pub fn set_chat_response(
 ///
 /// Sets `error.type` to the status code string, records the span status as error,
 /// and emits an `llm.http_error` event.
-pub fn set_chat_http_error(
+pub fn set_http_error(
   span : @trace.Span,
   status_code : Int,
   message? : String,

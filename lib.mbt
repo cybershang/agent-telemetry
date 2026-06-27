@@ -766,12 +766,6 @@ pub async fn end_span(span : @trace.Span, status? : @trace.Status) -> Unit {
 }
 
 ///|
-/// End a span marking it as failed.
-pub async fn end_span_error(span : @trace.Span, description~ : String) -> Unit {
-  end_span(span, status=@trace.Status::error(description=Some(description)))
-}
-
-///|
 /// Set multiple attributes on a span.
 pub fn set_attributes(
   span : @trace.Span,
