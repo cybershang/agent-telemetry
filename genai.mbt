@@ -65,10 +65,10 @@ pub fn start_chat_span(
 }
 
 ///|
-/// Record usage attributes from a GenAI response usage object.
+/// Set usage attributes from a GenAI response usage object.
 ///
 /// Sets `gen_ai.usage.input_tokens` and `gen_ai.usage.output_tokens` when present.
-pub fn record_chat_usage(span : @trace.Span, usage_json : Json) -> Unit {
+pub fn set_chat_usage(span : @trace.Span, usage_json : Json) -> Unit {
   if usage_json is { "prompt_tokens": Number(pt, ..), .. } {
     span.set_attribute(
       @otel.KeyValue::new(
@@ -88,12 +88,12 @@ pub fn record_chat_usage(span : @trace.Span, usage_json : Json) -> Unit {
 }
 
 ///|
-/// Record response metadata and optional output messages for a successful chat request.
+/// Set response attributes for a successful chat request.
 ///
 /// Extracts `gen_ai.response.id`, `gen_ai.response.model` and
 /// `gen_ai.response.finish_reasons` from `response_json`.
 /// Sets `gen_ai.output.messages` when `output_messages` is provided.
-pub fn record_chat_response(
+pub fn set_chat_response(
   span : @trace.Span,
   response_json : Json,
   output_messages? : Json? = None,

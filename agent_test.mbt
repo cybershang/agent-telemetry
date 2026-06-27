@@ -20,10 +20,10 @@ async test "start_agent_turn_span sets input and max turns" {
 }
 
 ///|
-async test "record_turn_metrics sets turn metrics" {
+async test "set_turn sets turn attributes" {
   let (tracer, exporter) = make_test_tracer()
   let span = start_agent_turn_span(tracer, "hello", 10)
-  record_turn_metrics(span, 3, 2, "final reply")
+  set_turn(span, 3, 2, "final reply")
   end_span_ok(span)
   let spans = exporter.finished_spans()
   match find_attr(spans[0], "agent.turn.actual_turns") {
@@ -44,7 +44,7 @@ async test "record_turn_metrics sets turn metrics" {
 async test "set_turn_max_tool_turns_error marks error" {
   let (tracer, exporter) = make_test_tracer()
   let span = start_agent_turn_span(tracer, "hello", 1)
-  set_turn_max_tool_turns_error(span)
+  set_turn_exhausted(span)
   end_span(span)
   let spans = exporter.finished_spans()
   assert_true(spans[0].status.code == @sdktrace.Error)

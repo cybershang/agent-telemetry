@@ -69,14 +69,14 @@ test "tracer returns same tracer for same scope" {
 }
 
 ///|
-async test "set_*_attribute helpers write typed span attributes" {
+async test "set_* helpers write typed span attributes" {
   let (tracer, exporter) = make_test_tracer()
   let span = start_span(tracer, "custom.attrs")
-  set_string_attribute(span, "app.user.id", "user-42")
-  set_int_attribute(span, "app.retry.count", 3L)
-  set_double_attribute(span, "app.score", 0.95)
-  set_bool_attribute(span, "app.cached", true)
-  set_json_attribute(span, "app.metadata", { "source": "api", "depth": 2 })
+  set_string(span, "app.user.id", "user-42")
+  set_int(span, "app.retry.count", 3L)
+  set_double(span, "app.score", 0.95)
+  set_bool(span, "app.cached", true)
+  set_json(span, "app.metadata", { "source": "api", "depth": 2 })
   end_span_ok(span)
   let spans = exporter.finished_spans()
   assert_eq(spans.length(), 1)

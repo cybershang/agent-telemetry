@@ -29,8 +29,8 @@ pub fn start_tool_span(
 }
 
 ///|
-/// Record the result of a tool execution and mark the span as successful.
-pub fn record_tool_result(span : @trace.Span, result : String) -> Unit {
+/// Set the result of a tool execution and mark the span as successful.
+pub fn set_tool_result(span : @trace.Span, result : String) -> Unit {
   if result.contains("\"error\"") {
     span.set_status(
       @trace.Status::error(description=Some("tool returned error")),

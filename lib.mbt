@@ -789,54 +789,34 @@ pub fn set_attributes(
 }
 
 ///|
-/// Set a string attribute on a span.
-pub fn set_string_attribute(
-  span : @trace.Span,
-  name : String,
-  value : String,
-) -> Unit {
+/// Set a string on a span.
+pub fn set_string(span : @trace.Span, name : String, value : String) -> Unit {
   span.set_attribute(@otel.KeyValue::new(name, String(value)))
 }
 
 ///|
-/// Set an integer attribute on a span.
-pub fn set_int_attribute(
-  span : @trace.Span,
-  name : String,
-  value : Int64,
-) -> Unit {
+/// Set an integer on a span.
+pub fn set_int(span : @trace.Span, name : String, value : Int64) -> Unit {
   span.set_attribute(@otel.KeyValue::new(name, Int64(value)))
 }
 
 ///|
-/// Set a floating-point attribute on a span.
-pub fn set_double_attribute(
-  span : @trace.Span,
-  name : String,
-  value : Double,
-) -> Unit {
+/// Set a floating-point on a span.
+pub fn set_double(span : @trace.Span, name : String, value : Double) -> Unit {
   span.set_attribute(@otel.KeyValue::new(name, Double(value)))
 }
 
 ///|
-/// Set a boolean attribute on a span.
-pub fn set_bool_attribute(
-  span : @trace.Span,
-  name : String,
-  value : Bool,
-) -> Unit {
+/// Set a boolean on a span.
+pub fn set_bool(span : @trace.Span, name : String, value : Bool) -> Unit {
   span.set_attribute(@otel.KeyValue::new(name, Bool(value)))
 }
 
 ///|
-/// Set a JSON attribute on a span.
+/// Set a JSON on a span.
 /// The JSON value is serialized to a string, which is useful for structured
 /// custom metadata that does not have a dedicated scalar attribute.
-pub fn set_json_attribute(
-  span : @trace.Span,
-  name : String,
-  value : Json,
-) -> Unit {
+pub fn set_json(span : @trace.Span, name : String, value : Json) -> Unit {
   span.set_attribute(@otel.KeyValue::new(name, String(value.stringify())))
 }
 

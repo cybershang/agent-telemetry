@@ -25,13 +25,13 @@ pub fn start_agent_turn_span(
 }
 
 ///|
-/// Record turn-level metrics before ending an agent turn span.
+/// Record turn-level attributes before ending an agent turn span.
 ///
 /// Sets:
 /// - `agent.turn.actual_turns`
 /// - `agent.turn.tool_call_count`
 /// - `agent.turn.output`
-pub fn record_turn_metrics(
+pub fn set_turn(
   span : @trace.Span,
   actual_turns : Int,
   tool_call_count : Int,
@@ -54,7 +54,7 @@ pub fn record_turn_metrics(
 
 ///|
 /// Mark an agent turn span as failed due to reaching the maximum tool turns.
-pub fn set_turn_max_tool_turns_error(span : @trace.Span) -> Unit {
+pub fn set_turn_exhausted(span : @trace.Span) -> Unit {
   span.set_status(
     @trace.Status::error(description=Some("max_tool_turns_reached")),
   )

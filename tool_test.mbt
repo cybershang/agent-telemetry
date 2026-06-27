@@ -20,10 +20,10 @@ async test "start_tool_span sets tool attributes" {
 }
 
 ///|
-async test "record_tool_result marks ok for success" {
+async test "set_tool_result marks ok for success" {
   let (tracer, exporter) = make_test_tracer()
   let span = start_tool_span(tracer, "get_weather", "{}")
-  record_tool_result(span, "{\"temperature\": 25}")
+  set_tool_result(span, "{\"temperature\": 25}")
   end_span(span)
   let spans = exporter.finished_spans()
   assert_true(spans[0].status.code == @sdktrace.Ok)
@@ -34,10 +34,10 @@ async test "record_tool_result marks ok for success" {
 }
 
 ///|
-async test "record_tool_result marks error for error result" {
+async test "set_tool_result marks error for error result" {
   let (tracer, exporter) = make_test_tracer()
   let span = start_tool_span(tracer, "get_weather", "{}")
-  record_tool_result(span, "{\"error\": \"failed\"}")
+  set_tool_result(span, "{\"error\": \"failed\"}")
   end_span(span)
   let spans = exporter.finished_spans()
   assert_true(spans[0].status.code == @sdktrace.Error)

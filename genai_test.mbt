@@ -48,11 +48,11 @@ async test "start_chat_span records input messages" {
 }
 
 ///|
-async test "record_chat_usage sets token attributes" {
+async test "set_chat_usage sets token attributes" {
   let (tracer, exporter) = make_test_tracer()
   let span = start_chat_span(tracer, "stepfun", "step-3.7-flash", 1024)
   let usage = { "prompt_tokens": 10, "completion_tokens": 20 }.to_json()
-  record_chat_usage(span, usage)
+  set_chat_usage(span, usage)
   end_span_ok(span)
   let spans = exporter.finished_spans()
   match find_attr(spans[0], "gen_ai.usage.input_tokens") {
@@ -66,7 +66,7 @@ async test "record_chat_usage sets token attributes" {
 }
 
 ///|
-async test "record_chat_response sets response metadata" {
+async test "set_chat_response sets response metadata" {
   let (tracer, exporter) = make_test_tracer()
   let span = start_chat_span(tracer, "stepfun", "step-3.7-flash", 1024)
   let response = Json::object({
@@ -82,7 +82,7 @@ async test "record_chat_response sets response metadata" {
       }),
     ].to_json(),
   })
-  record_chat_response(span, response)
+  set_chat_response(span, response)
   end_span_ok(span)
   let spans = exporter.finished_spans()
   match find_attr(spans[0], "gen_ai.response.id") {
