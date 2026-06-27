@@ -5,7 +5,7 @@
 async test "start_tool_span sets tool attributes" {
   let (tracer, exporter) = make_test_tracer()
   let span = start_tool_span(tracer, "get_weather", "{\"city\":\"Beijing\"}")
-  end_span_ok(span)
+  end_span(span)
   let spans = exporter.finished_spans()
   assert_eq(spans.length(), 1)
   assert_eq(spans[0].name, "gen_ai.tool.execution")

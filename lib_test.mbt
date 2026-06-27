@@ -29,7 +29,7 @@ async test "start_span creates span with name and attributes" {
   let span = start_span(tracer, "test.span", kind=@trace.Client, attributes=[
     @otel.KeyValue::new("custom.key", String("value")),
   ])
-  end_span_ok(span)
+  end_span(span)
   let spans = exporter.finished_spans()
   assert_eq(spans.length(), 1)
   assert_eq(spans[0].name, "test.span")
@@ -51,13 +51,6 @@ async test "end_span preserves existing error status" {
 }
 
 ///|
-async test "end_span_ok sets ok status" {
-  let (tracer, exporter) = make_test_tracer()
-  let span = start_span(tracer, "ok.span")
-  end_span_ok(span)
-  let spans = exporter.finished_spans()
-  assert_true(spans[0].status.code == @sdktrace.Ok)
-}
 
 ///|
 test "tracer returns same tracer for same scope" {
@@ -77,7 +70,7 @@ async test "set_* helpers write typed span attributes" {
   set_double(span, "app.score", 0.95)
   set_bool(span, "app.cached", true)
   set_json(span, "app.metadata", { "source": "api", "depth": 2 })
-  end_span_ok(span)
+  end_span(span)
   let spans = exporter.finished_spans()
   assert_eq(spans.length(), 1)
   let s = spans[0]

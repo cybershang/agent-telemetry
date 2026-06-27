@@ -5,7 +5,7 @@
 async test "start_chat_span sets GenAI request attributes" {
   let (tracer, exporter) = make_test_tracer()
   let span = start_chat_span(tracer, "stepfun", "step-3.7-flash", 1024)
-  end_span_ok(span)
+  end_span(span)
   let spans = exporter.finished_spans()
   assert_eq(spans.length(), 1)
   assert_eq(spans[0].name, "gen_ai.chat")
@@ -39,7 +39,7 @@ async test "start_chat_span records input messages" {
     1024,
     input_messages=Some(input_messages),
   )
-  end_span_ok(span)
+  end_span(span)
   let spans = exporter.finished_spans()
   match find_attr(spans[0], "gen_ai.input.messages") {
     Some(String(s)) => assert_true(s.contains("hello"))
@@ -53,7 +53,7 @@ async test "set_chat_usage sets token attributes" {
   let span = start_chat_span(tracer, "stepfun", "step-3.7-flash", 1024)
   let usage = { "prompt_tokens": 10, "completion_tokens": 20 }.to_json()
   set_chat_usage(span, usage)
-  end_span_ok(span)
+  end_span(span)
   let spans = exporter.finished_spans()
   match find_attr(spans[0], "gen_ai.usage.input_tokens") {
     Some(Int64(10)) => ()
@@ -83,7 +83,7 @@ async test "set_chat_response sets response metadata" {
     ].to_json(),
   })
   set_chat_response(span, response)
-  end_span_ok(span)
+  end_span(span)
   let spans = exporter.finished_spans()
   match find_attr(spans[0], "gen_ai.response.id") {
     Some(String("resp-1")) => ()

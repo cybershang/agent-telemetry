@@ -5,7 +5,7 @@
 async test "start_agent_turn_span sets input and max turns" {
   let (tracer, exporter) = make_test_tracer()
   let span = start_agent_turn_span(tracer, "What is the weather?", 10)
-  end_span_ok(span)
+  end_span(span)
   let spans = exporter.finished_spans()
   assert_eq(spans.length(), 1)
   assert_eq(spans[0].name, "agent.turn")
@@ -24,7 +24,7 @@ async test "set_turn sets turn attributes" {
   let (tracer, exporter) = make_test_tracer()
   let span = start_agent_turn_span(tracer, "hello", 10)
   set_turn(span, 3, 2, "final reply")
-  end_span_ok(span)
+  end_span(span)
   let spans = exporter.finished_spans()
   match find_attr(spans[0], "agent.turn.actual_turns") {
     Some(Int64(3)) => ()

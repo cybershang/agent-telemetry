@@ -62,7 +62,7 @@ async test "init_telemetry tolerates unreachable OTLP endpoint" {
   // unreachable, because the exporter is wrapped by safe_span_exporter.
   let tracer = @otel.tracer("test-scope")
   let span = start_span(tracer, "test.span")
-  end_span_ok(span)
+  end_span(span)
   providers.force_flush()
 }
 

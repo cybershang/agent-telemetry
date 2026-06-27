@@ -93,7 +93,7 @@ pub fn record_tool_call(
 
 ///|
 /// Record one completed agent turn.
-pub fn record_turn_count(
+pub fn record_turn(
   meter : @metrics.Meter,
   max_tool_turns_reached~ : Bool,
 ) -> Unit {
