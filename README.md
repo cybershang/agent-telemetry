@@ -78,7 +78,7 @@ let span = @telemetry.start_span(tracer, "my.step")
 @telemetry.end_span(span)
 ```
 
-`set_json_attribute` serializes the `Json` value to a string, which is useful for structured metadata that does not fit the scalar attribute types. For arbitrary attribute lists you can still use `set_attributes(span, attrs)` with `@otel.KeyValue` values.
+`set_json` serializes the `Json` value to a string, which is useful for structured metadata that does not fit the scalar attribute types. For arbitrary attribute lists you can still use `set_attributes(span, attrs)` with `@otel.KeyValue` values.
 
 ## Instrumentation Guide
 

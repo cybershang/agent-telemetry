@@ -33,17 +33,17 @@ async fn chat(
   let (response, body) = @http.post(endpoint, request_json, headers~)
 
   guard response.code == 200 else {
-    @telemetry.set_chat_http_error(span, response.code)
+    @telemetry.set_http_error(span, response.code)
     @telemetry.end_span(span)
     abort("LLM request failed")
   }
 
   let data = body.json()
-  if data is { "usage": usage_obj, .. } {
-    @telemetry.record_chat_usage(span, usage_obj)
+  if data is { "usage": { "prompt_tokens": Int64(prompt), "completion_tokens": Int64(completion), .. }, .. } {
+    @telemetry.set_usage(span, prompt, completion)
   }
-  @telemetry.record_chat_response(span, data, output_messages~)
-  @telemetry.end_span_ok(span)
+  @telemetry.set_response(span, data, output_messages~)
+  @telemetry.end_span(span)
 
   parse_response(data)
 }
@@ -71,13 +71,13 @@ pub async fn execute_tool(
 
   let result = run_the_tool(name, arguments)
 
-  @telemetry.record_tool_result(span, result)
+  @telemetry.set_tool_result(span, result)
   @telemetry.end_span(span)
   result
 }
 ```
 
-`record_tool_result` automatically marks the span as error if the result string contains `"error"`. Use `set_tool_error` if you want to set a custom error description.
+`set_tool_result` automatically marks the span as error if the result string contains `"error"`. Use `set_tool_error` if you want to set a custom error description.
 
 ## Instrumenting an Agent Turn
 
@@ -96,11 +96,11 @@ pub async fn Agent::run(self : Agent, prompt : String) -> AgentTurnResult {
   // ... run the LLM / tool loop using parent_context~ ...
 
   if hit_max_tool_turns {
-    @telemetry.set_turn_max_tool_turns_error(span)
+    @telemetry.set_turn_exhausted(span)
   }
 
-  @telemetry.record_turn_metrics(span, turns, executed.length(), final_reply)
-  @telemetry.end_span_ok(span)
+  @telemetry.set_turn(span, turns, executed.length(), final_reply)
+  @telemetry.end_span(span)
 
   { reply: final_reply, tool_calls: executed }
 }
@@ -118,15 +118,15 @@ The semantic helpers record the standard GenAI attributes automatically. You can
 
 ```moonbit
 let span = @telemetry.start_span(tracer, "my.step")
-@telemetry.set_string_attribute(span, "app.user.id", "user-42")
-@telemetry.set_int_attribute(span, "app.retry.count", 3L)
-@telemetry.set_double_attribute(span, "app.score", 0.95)
-@telemetry.set_bool_attribute(span, "app.cached", true)
-@telemetry.set_json_attribute(span, "app.metadata", { "source": "api", "depth": 2 })
-@telemetry.end_span_ok(span)
+@telemetry.set_string(span, "app.user.id", "user-42")
+@telemetry.set_int(span, "app.retry.count", 3L)
+@telemetry.set_double(span, "app.score", 0.95)
+@telemetry.set_bool(span, "app.cached", true)
+@telemetry.set_json(span, "app.metadata", { "source": "api", "depth": 2 })
+@telemetry.end_span(span)
 ```
 
-`set_json_attribute` serializes the `Json` value to a string attribute, which is convenient for structured metadata that does not fit the scalar attribute types. If you already have an array of `@otel.KeyValue` values, use `set_attributes(span, attrs)` directly.
+`set_json` serializes the `Json` value to a string attribute, which is convenient for structured metadata that does not fit the scalar attribute types. If you already have an array of `@otel.KeyValue` values, use `set_attributes(span, attrs)` directly.
 
 ### Example: application-specific attributes in this sample app
 
