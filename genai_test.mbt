@@ -107,9 +107,73 @@ async test "set_http_error records error event and status" {
   let spans = exporter.finished_spans()
   assert_true(spans[0].status.code == @sdktrace.Error)
   assert_eq(spans[0].events.length(), 1)
-  assert_eq(spans[0].events[0].name, "llm.http_error")
+  assert_eq(spans[0].events[0].name, "gen_ai.client.operation.exception")
   match find_attr(spans[0], "error.type") {
     Some(String("401")) => ()
     _ => fail("expected error.type=401")
+  }
+}
+
+///|
+async test "start_chat_span sets temperature and top_p" {
+  let (tracer, exporter) = make_test_tracer()
+  let span = start_chat_span(
+    tracer,
+    "stepfun",
+    "step-3.7-flash",
+    1024,
+    temperature=Some(0.7),
+    top_p=Some(0.9),
+  )
+  end_span(span)
+  let spans = exporter.finished_spans()
+  match find_attr(spans[0], "gen_ai.request.temperature") {
+    Some(Double(0.7)) => ()
+    _ => fail("expected temperature=0.7")
+  }
+  match find_attr(spans[0], "gen_ai.request.top_p") {
+    Some(Double(0.9)) => ()
+    _ => fail("expected top_p=0.9")
+  }
+}
+
+///|
+async test "start_chat_span sets stream flag" {
+  let (tracer, exporter) = make_test_tracer()
+  let span = start_chat_span(
+    tracer,
+    "stepfun",
+    "step-3.7-flash",
+    1024,
+    stream=Some(true),
+  )
+  end_span(span)
+  let spans = exporter.finished_spans()
+  match find_attr(spans[0], "gen_ai.request.stream") {
+    Some(Bool(true)) => ()
+    _ => fail("expected stream=true")
+  }
+}
+
+///|
+async test "set_usage records cache and reasoning tokens" {
+  let (tracer, exporter) = make_test_tracer()
+  let span = start_chat_span(tracer, "stepfun", "step-3.7-flash", 1024)
+  set_usage(
+    span,
+    100L,
+    25L,
+    cache_read_input_tokens=50L,
+    reasoning_output_tokens=10L,
+  )
+  end_span(span)
+  let spans = exporter.finished_spans()
+  match find_attr(spans[0], "gen_ai.usage.cache_read.input_tokens") {
+    Some(Int64(50)) => ()
+    _ => fail("expected cache_read_input_tokens=50")
+  }
+  match find_attr(spans[0], "gen_ai.usage.reasoning.output_tokens") {
+    Some(Int64(10)) => ()
+    _ => fail("expected reasoning_output_tokens=10")
   }
 }

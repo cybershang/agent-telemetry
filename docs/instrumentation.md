@@ -21,13 +21,15 @@ async fn chat(
   let tracer = @telemetry.tracer("my-agent/llm")
   let span = @telemetry.start_chat_span(
     tracer,
-    provider_name="stepfun",
-    model="step-3.7-flash",
-    max_tokens=1024,
-    input_messages~,        // optional: capture input messages
-    server_address~,        // optional: server.address attribute
-    server_port~,           // optional: server.port attribute
-    parent_context~,        // optional: continue an existing trace
+    "stepfun",
+    "step-3.7-flash",
+    1024,
+    temperature=Some(0.7),       // optional: temperature setting
+    stream=Some(true),            // optional: streaming mode
+    input_messages~,              // optional: capture input messages
+    server_address~,              // optional: server.address attribute
+    server_port~,                 // optional: server.port attribute
+    parent_context~,              // optional: continue an existing trace
   )
 
   let (response, body) = @http.post(endpoint, request_json, headers~)
@@ -40,7 +42,10 @@ async fn chat(
 
   let data = body.json()
   if data is { "usage": { "prompt_tokens": Int64(prompt), "completion_tokens": Int64(completion), .. }, .. } {
-    @telemetry.set_usage(span, prompt, completion)
+    @telemetry.set_usage(span, prompt, completion,
+      cache_read_input_tokens=50L,    // optional: cached input tokens
+      reasoning_output_tokens=10L,    // optional: reasoning output tokens
+    )
   }
   @telemetry.set_response(span, data, output_messages~)
   @telemetry.end_span(span)
@@ -49,11 +54,11 @@ async fn chat(
 }
 ```
 
-This produces a span named `gen_ai.chat` with attributes such as `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, and `gen_ai.response.id`. On HTTP failure it also sets `error.type` to the status code string.
+This produces a span named `gen_ai.chat` with attributes such as `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.usage.input_tokens`, and `gen_ai.response.id`. On HTTP failure it also sets `error.type` and emits a `gen_ai.client.operation.exception` event following the OTel GenAI semantic conventions.
 
 ## Instrumenting Tool Execution
 
-In your tool dispatcher, wrap each tool call in a `gen_ai.tool.execution` span:
+In your tool dispatcher, wrap each tool call in an `execute_tool {name}` span:
 
 ```moonbit
 pub async fn execute_tool(
@@ -66,6 +71,8 @@ pub async fn execute_tool(
     tracer,
     name,
     arguments,
+    call_id=Some("call_abc123"),     // optional: tool call identifier
+    tool_type=Some("function"),       // optional: tool type
     parent_context~,
   )
 
@@ -108,6 +115,54 @@ pub async fn Agent::run(self : Agent, prompt : String) -> AgentTurnResult {
 
 The `parent_context` is passed to the LLM chat request and each tool execution, so the resulting trace shows the agent turn as the parent of its chat and tool spans.
 
+## Instrumenting Agent Invocation
+
+When an agent is invoked within the same process, use `start_invoke_agent_span` to create a `gen_ai.invoke_agent.internal` span:
+
+```moonbit
+pub async fn run_agent(
+  tracer : @trace.Tracer,
+  agent_name : String,
+  prompt : String,
+) -> String {
+  let span = @telemetry.start_invoke_agent_span(
+    tracer,
+    agent_name=Some(agent_name),
+  )
+  let parent_context = span.context()
+
+  // ... agent logic using parent_context~ ...
+
+  @telemetry.end_span(span)
+}
+```
+
+This produces a span named `invoke_agent {name}` with `gen_ai.operation.name` set to `"invoke_agent"`.
+
+## Instrumenting Planning
+
+For agent planning or task decomposition phases, use `start_plan_span` to create a `gen_ai.plan.internal` span:
+
+```moonbit
+pub async fn plan(
+  tracer : @trace.Tracer,
+  agent_name : String,
+  task : String,
+) -> Plan {
+  let span = @telemetry.start_plan_span(
+    tracer,
+    agent_name=Some(agent_name),
+  )
+  let parent_context = span.context()
+
+  // ... planning logic ...
+
+  @telemetry.end_span(span)
+}
+```
+
+This produces a span named `plan {name}` with `gen_ai.operation.name` set to `"plan"`.
+
 ## Propagating Trace Context
 
 Always pass `parent_context=span.context()` when a function calls another instrumented function. This links the child span to the parent span and produces a single coherent trace. If no parent is available, the helpers default to an empty context.
@@ -140,7 +195,7 @@ The `agent-observability` sample application records a small set of `app.*` attr
 | `agent.turn` | `app.agent.reached_max_turns` | bool | Whether max_tool_turns was hit | count of `true` |
 | `gen_ai.chat` | `app.llm.capture_content` | bool | Whether this client captures content | toggle / last value display |
 | `gen_ai.chat` | `app.llm.tool_calls.count` | int64 | Number of tool calls in the response | avg / sum / max |
-| `gen_ai.tool.execution` | `app.tool.result.length` | int64 | Length of the tool result JSON string | avg / p95 / histogram |
+| `execute_tool {name}` | `app.tool.result.length` | int64 | Length of the tool result JSON string | avg / p95 / histogram |
 
 These attributes are set with the typed helpers shown above, so they are easy to query in GreptimeDB / Grafana alongside the built-in GenAI attributes.
 
@@ -162,6 +217,8 @@ The following metrics are emitted:
 |---|---|---|
 | `gen_ai.client.operation.duration` | Histogram | `gen_ai.operation.name`, `gen_ai.provider.name`, `gen_ai.request.model` |
 | `gen_ai.client.token.usage` | Histogram | `gen_ai.operation.name`, `gen_ai.provider.name`, `gen_ai.request.model`, `gen_ai.token.type` |
+| `gen_ai.invoke_agent.duration` | Histogram | `gen_ai.agent.name` |
+| `gen_ai.execute_tool.duration` | Histogram | `gen_ai.tool.name` |
 | `agent.tool.calls_total` | Counter | `gen_ai.tool.name`, `success` |
 | `agent.turn.total` | Counter | `max_tool_turns_reached` |
 

@@ -49,3 +49,33 @@ async test "set_turn_max_tool_turns_error marks error" {
   let spans = exporter.finished_spans()
   assert_true(spans[0].status.code == @sdktrace.Error)
 }
+
+///|
+async test "start_invoke_agent_span sets operation name and span name" {
+  let (tracer, exporter) = make_test_tracer()
+  let span = start_invoke_agent_span(tracer, agent_name=Some("Math Tutor"))
+  end_span(span)
+  let spans = exporter.finished_spans()
+  assert_eq(spans[0].name, "invoke_agent Math Tutor")
+  match find_attr(spans[0], "gen_ai.operation.name") {
+    Some(String("invoke_agent")) => ()
+    _ => fail("expected gen_ai.operation.name=invoke_agent")
+  }
+  match find_attr(spans[0], "gen_ai.agent.name") {
+    Some(String("Math Tutor")) => ()
+    _ => fail("expected agent.name")
+  }
+}
+
+///|
+async test "start_plan_span sets operation name and span name" {
+  let (tracer, exporter) = make_test_tracer()
+  let span = start_plan_span(tracer, agent_name=Some("Research Agent"))
+  end_span(span)
+  let spans = exporter.finished_spans()
+  assert_eq(spans[0].name, "plan Research Agent")
+  match find_attr(spans[0], "gen_ai.operation.name") {
+    Some(String("plan")) => ()
+    _ => fail("expected gen_ai.operation.name=plan")
+  }
+}

@@ -4,24 +4,45 @@
 ///| Tool execution span helpers
 
 ///|
-/// Start a span for a GenAI tool execution.
+/// Start a span for a GenAI tool execution following OTel GenAI conventions.
 ///
 /// Sets:
+/// - `gen_ai.operation.name` = "execute_tool"
 /// - `gen_ai.tool.name`
 /// - `gen_ai.tool.call.arguments`
+/// - `gen_ai.tool.call.id` (when provided)
+/// - `gen_ai.tool.type` (when provided)
+///
+/// Span name: `execute_tool {name}`
 pub fn start_tool_span(
   tracer : @trace.Tracer,
   name : String,
   arguments : String,
+  /// The tool call identifier returned by the LLM.
+  call_id? : String? = None,
+  /// Type of the tool (e.g. "function", "extension", "datastore").
+  tool_type? : String? = None,
+  /// The parent span context to continue an existing trace.
   parent_context? : @context.Context = @context.Context::empty(),
 ) -> @trace.Span {
   let attributes = [
+    @otel.KeyValue::new("gen_ai.operation.name", String("execute_tool")),
     @otel.KeyValue::new("gen_ai.tool.name", String(name)),
     @otel.KeyValue::new("gen_ai.tool.call.arguments", String(arguments)),
   ]
+  match call_id {
+    Some(id) =>
+      attributes.push(@otel.KeyValue::new("gen_ai.tool.call.id", String(id)))
+    None => ()
+  }
+  match tool_type {
+    Some(t) =>
+      attributes.push(@otel.KeyValue::new("gen_ai.tool.type", String(t)))
+    None => ()
+  }
   start_span(
     tracer,
-    "gen_ai.tool.execution",
+    "execute_tool \{name}",
     kind=@trace.Internal,
     attributes~,
     parent_context~,

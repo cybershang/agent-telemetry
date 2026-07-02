@@ -59,3 +59,79 @@ pub fn set_turn_exhausted(span : @trace.Span) -> Unit {
     @trace.Status::error(description=Some("max_tool_turns_reached")),
   )
 }
+
+///|
+/// Start a span for a GenAI agent invocation within the same process.
+///
+/// Follows the `gen_ai.invoke_agent.internal` semantic convention.
+///
+/// Sets:
+/// - `gen_ai.operation.name` = "invoke_agent"
+/// - `gen_ai.agent.name` (when provided)
+///
+/// Span name: `invoke_agent {name}` or `invoke_agent` when name is unavailable.
+pub fn start_invoke_agent_span(
+  tracer : @trace.Tracer,
+  /// The human-readable name of the invoked GenAI agent.
+  agent_name? : String? = None,
+  /// The parent span context to continue an existing trace.
+  parent_context? : @context.Context = @context.Context::empty(),
+) -> @trace.Span {
+  let span_name = match agent_name {
+    Some(name) => "invoke_agent " + name
+    None => "invoke_agent"
+  }
+  let attributes : Array[@common.KeyValue] = [
+    @otel.KeyValue::new("gen_ai.operation.name", String("invoke_agent")),
+  ]
+  match agent_name {
+    Some(name) =>
+      attributes.push(@otel.KeyValue::new("gen_ai.agent.name", String(name)))
+    None => ()
+  }
+  start_span(
+    tracer,
+    span_name,
+    kind=@trace.Internal,
+    attributes~,
+    parent_context~,
+  )
+}
+
+///|
+/// Start a span for an agent planning or task decomposition phase.
+///
+/// Follows the `gen_ai.plan.internal` semantic convention.
+///
+/// Sets:
+/// - `gen_ai.operation.name` = "plan"
+/// - `gen_ai.agent.name` (when provided)
+///
+/// Span name: `plan {name}` or `plan` when name is unavailable.
+pub fn start_plan_span(
+  tracer : @trace.Tracer,
+  /// The human-readable name of the agent performing the planning.
+  agent_name? : String? = None,
+  /// The parent span context to continue an existing trace.
+  parent_context? : @context.Context = @context.Context::empty(),
+) -> @trace.Span {
+  let span_name = match agent_name {
+    Some(name) => "plan " + name
+    None => "plan"
+  }
+  let attributes : Array[@common.KeyValue] = [
+    @otel.KeyValue::new("gen_ai.operation.name", String("plan")),
+  ]
+  match agent_name {
+    Some(name) =>
+      attributes.push(@otel.KeyValue::new("gen_ai.agent.name", String(name)))
+    None => ()
+  }
+  start_span(
+    tracer,
+    span_name,
+    kind=@trace.Internal,
+    attributes~,
+    parent_context~,
+  )
+}

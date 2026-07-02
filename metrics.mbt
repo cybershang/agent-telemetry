@@ -104,3 +104,45 @@ pub fn record_turn(
     ),
   ])
 }
+
+///|
+/// Record the duration of one GenAI agent invocation in seconds.
+///
+/// Metric: `gen_ai.invoke_agent.duration` (Histogram, unit="s")
+pub fn record_agent_duration(
+  meter : @metrics.Meter,
+  agent_name : String,
+  /// Duration in seconds.
+  seconds~ : Double,
+) -> Unit {
+  meter
+  .f64_histogram("gen_ai.invoke_agent.duration")
+  .with_description(
+    "The end-to-end duration of a single in-process agent invocation",
+  )
+  .with_unit("s")
+  .build()
+  .record(seconds, attributes=[
+    @common.KeyValue::new("gen_ai.agent.name", String(agent_name)),
+  ])
+}
+
+///|
+/// Record the duration of one GenAI tool execution in seconds.
+///
+/// Metric: `gen_ai.execute_tool.duration` (Histogram, unit="s")
+pub fn record_tool_duration(
+  meter : @metrics.Meter,
+  tool_name : String,
+  /// Duration in seconds.
+  seconds~ : Double,
+) -> Unit {
+  meter
+  .f64_histogram("gen_ai.execute_tool.duration")
+  .with_description("The duration of a single tool execution")
+  .with_unit("s")
+  .build()
+  .record(seconds, attributes=[
+    @common.KeyValue::new("gen_ai.tool.name", String(tool_name)),
+  ])
+}

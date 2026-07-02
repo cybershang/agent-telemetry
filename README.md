@@ -40,12 +40,15 @@ let providers = @telemetry.init_telemetry(
   let meter = @telemetry.meter("my-agent/llm")
   let span = @telemetry.start_chat_span(
     tracer,
-    provider_name="stepfun",
-    model="step-3.7-flash",
-    max_tokens=1024,
+    "stepfun",
+    "step-3.7-flash",
+    1024,
+    temperature=Some(0.7),
+    stream=Some(true),
   )
   // ... send the request and obtain response_json ...
-  @telemetry.set_response(span, response_json)
+  @telemetry.set_usage(span, 100L, 25L, cache_read_input_tokens=50L)
+  @telemetry.set_response(span, response_json, output_messages~)
   @telemetry.end_span(span)
 
   providers.force_flush()
@@ -61,7 +64,9 @@ let providers = @telemetry.init_telemetry(
 | LLM chat | `start_chat_span`, `set_usage`, `set_response`, `set_http_error` |
 | Tool | `start_tool_span`, `set_tool_result`, `set_tool_error` |
 | Agent turn | `start_agent_turn_span`, `set_turn`, `set_turn_exhausted` |
-| Metrics | `record_llm_latency`, `record_usage`, `record_tool_call`, `record_turn` |
+| Agent invocation | `start_invoke_agent_span` |
+| Plan | `start_plan_span` |
+| Metrics | `record_llm_latency`, `record_usage`, `record_tool_call`, `record_turn`, `record_agent_duration`, `record_tool_duration` |
 | Logs | `emit_log`, `log_info`, `log_warn`, `log_error`, `log_conversation_message` |
 
 ## Custom Span Attributes
